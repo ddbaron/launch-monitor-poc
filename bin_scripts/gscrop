@@ -1,0 +1,53 @@
+#!/bin/bash 
+
+# Set default values
+width=1152
+height=192
+framerate=304
+ms=4000
+us=75
+
+# Check if width, height, framerate, ms, and us are provided as command-line arguments
+if [[ $# -lt 4 ]]; then
+  echo "Using default values: width=$width, height=$height, framerate=$framerate, ms=$ms, us=$us"
+else
+  width=$1
+  height=$2
+  framerate=$3
+  ms=$4
+  if [[ $# -gt 4 ]]; then
+    us=$5
+  fi
+fi
+
+# Set shutter flag based on the number of arguments
+if [[ $# -gt 4 ]]; then
+  SHTR="--shutter"
+  echo "adding --shutter $5"
+else
+  SHTR=""
+  echo "no shutter $5"
+fi
+
+# Loop through media devices and set V4L2 format
+for ((m=1; m<=5; ++m))
+do
+  if media-ctl -d "/dev/media$m" --set-v4l2 "'imx296 10-001a':0 [fmt:SBGGR10_1X10/${width}x${height} crop:($(( (1440 - $width) / 2 )),$(( (1088 - $height) / 2 )))/${width}x${height}]" >/dev/null; then
+    echo -e "/dev/media$m\n"
+    break
+  fi
+done
+
+# List cameras using libcamera-hello
+libcamera-hello --list-cameras
+echo
+
+# Remove existing timestamp file
+rm -f /dev/shm/tst.pts
+
+# Record video using libcamera-vid
+libcamera-vid --width "$width" --height "$height" --denoise cdn_off --framerate "$framerate" --save-pts /dev/shm/tst.pts -t "$ms" "$SHTR" "$us" -o /dev/shm/tst.h264 -n
+echo
+
+# Remove existing timestamp analysis file
+rm -f tstamps.csv && ptsanalyze /dev/shm/tst.pts
