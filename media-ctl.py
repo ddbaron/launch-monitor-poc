@@ -2,20 +2,20 @@ import subprocess
 import argparse
 
 def set_v4l2_format(width, height):
-    print(f"width: {width} height: {height}\n")
+    print(f"Setting V4L2 format for width: {width}, height: {height}\n")
     # Loop through media devices and set V4L2 format
     for m in range(1, 6):
         try:
-                # Calculate crop values
+            # Calculate crop values
             crop_x = (1440 - width) // 2
             crop_y = (1088 - height) // 2
 
-            # Construct the command using triple-quotes to handle both single and double quotes
-            command = f'''media-ctl -d /dev/media{m} --set-v4l2 "'imx296 10-001a':0 [fmt:SBGGR10_1X10/{width}x{height} crop:({crop_x},{crop_y})/{width}x{height}]" '''
- 
+            # Construct the command
+            command = f'media-ctl -d /dev/media{m} --set-v4l2 "\'imx296 10-001a\':0 [fmt:SBGGR10_1X10/{width}x{height} crop:({crop_x},{crop_y})/{width}x{height}]"'
+
             subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             
-            print(f"Success configuring media-ctl: on /dev/media{m}\n")
+            print(f"Success configuring media-ctl on /dev/media{m}\n")
             break
         except subprocess.CalledProcessError as e:
             print(f"Error configuring media-ctl: {e}")
