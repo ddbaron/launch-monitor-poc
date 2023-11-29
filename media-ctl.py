@@ -1,14 +1,24 @@
 import subprocess
 import argparse
 
-def set_v4l2_format(width, height):
-    print(f"Setting V4L2 format for width: {width}, height: {height}\n")
+def set_v4l2_format(width, height, centroid_x=None, centroid_y=None):
+    print(f"Setting V4L2 format for width: {width}, height: {height}")
+
+    # If centroid coordinates are not provided, set them to the middle
+    if centroid_x is None:
+        centroid_x = width // 2
+
+    if centroid_y is None:
+        centroid_y = height // 2
+    
+    print(f"Centroid: ({centroid_x}, {centroid_y})\n")
+
     # Loop through media devices and set V4L2 format
-    for m in range(1, 6):
+    for m in range(0, 6):
         try:
-            # Calculate crop values
-            crop_x = (1440 - width) // 2
-            crop_y = (1088 - height) // 2
+            # Calculate crop values based on centroid
+            crop_x = max(0, min(1440 - width, centroid_x - width // 2))
+            crop_y = max(0, min(1088 - height, centroid_y - height // 2))
 
             # Construct the command
             command = f'media-ctl -d /dev/media{m} --set-v4l2 "\'imx296 10-001a\':0 [fmt:SBGGR10_1X10/{width}x{height} crop:({crop_x},{crop_y})/{width}x{height}]"'
