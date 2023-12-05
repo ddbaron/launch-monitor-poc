@@ -1,6 +1,7 @@
 import cv2
 import time
 import numpy as np
+from detect_ball_coco import detect_ball_coco
 from picamera2 import Picamera2
 from libcamera import controls
 
@@ -133,9 +134,10 @@ def find_still_golf_ball_picam2():
                     coordinates_text = "XYZ: ({:.2f}, {:.2f})".format(ball_centroid[0], ball_centroid[1])
                     cv2.putText(frame, coordinates_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
-            # Check if the ball has been still for more than 3 seconds
-            if ball_found and time.time() - ball_still_start_time > 3:
+            # Check if the ball has been still for more than x seconds
+            if ball_found and time.time() - ball_still_start_time > 0.5:
                 print("Golf ball found and still!")
+                cv2.imwrite('found_ball.jpg', frame);
                 break
 
             cv2.imshow('Frame', frame)
@@ -155,6 +157,7 @@ def find_still_golf_ball_picam2():
         cv2.destroyAllWindows()
 
 def find_still_golf_ball_picam3():
+    
     try:
         picam2 = configure_vid()
         
@@ -224,6 +227,60 @@ def find_still_golf_ball_picam3():
         picam2.stop()
         cv2.destroyAllWindows()
 
+def find_still_golf_ball_coco():
+    try:
+        picam2 = configure_vid()
+        picam2.start()
+
+        # Initialize variables
+        ball_found = False
+        ball_still_start_time = None
+        ball_centroid = None
+        result = None
+
+        while True:
+            frame = picam2.capture_array()
+
+            result = detect_ball_coco(frame)
+            
+            if result is not None and result != {} and ball_found is False:
+                ball_found = True
+                ball_centroid = result['centroid']
+                ball_still_start_time = time.time()
+                print(f"ball still started at: {ball_still_start_time}")
+
+            # Check if the ball has been still for more than x seconds
+            print(f"time().time is: {time.time()}")
+            if ball_found and time.time() - ball_still_start_time > 5:
+                print("Golf ball found and still!")
+                cv2.imwrite('found_ball.jpg', frame);
+                break
+
+            if result['frame'] is not None:
+                frame = result['frame']
+                
+            cv2.imshow('Frame', frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+                
+            if result is not None and result != {}:
+                confidence_percentage = result['confidence'] * 100  # Convert to percentage
+                formatted_percentage = '{:.2f}%'.format(confidence_percentage)
+                print(f"Detected Object: {result['object_name']}, Confidence: {formatted_percentage}, Centroid: {result['centroid']}")
+
+            else:
+                print("Ball not found by coco.")
+            
+        return ball_centroid 
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+    finally:
+        picam2.stop()
+        cv2.destroyAllWindows()
+
 def configure_vid():
     picam2 = Picamera2()
 
@@ -231,19 +288,19 @@ def configure_vid():
     picam2.video_configuration.size = (1152, 192)
     picam2.video_configuration.controls.FrameRate = 304
     picam2.video_configuration.controls.ExposureTime = 1000
-    picam2.video_configuration.controls.AnalogueGain = 16.0  # 1.0 to 16.0
-    picam2.video_configuration.controls.Brightness = (
-        0.25  # Floating point number from -1.0 to 1.0. 0.0 is normal
-    )
-    picam2.video_configuration.controls.Contrast = 1.0  # 0.0 to 32.0
-    picam2.video_configuration.controls.Saturation = (
-        1.0  # 0.0 to 32.0 (0.0 greyscale, 1.0 is normal)
-    )
-    picam2.video_configuration.controls.Sharpness = (
-        1.0  # Floating point number from 0.0 to 16.0; 1.0 is normal
-    )
-    picam2.video_configuration.controls.AeEnable = False
-    picam2.video_configuration.controls.AeExposureMode = controls.AeExposureModeEnum.Short
+    # picam2.video_configuration.controls.AnalogueGain = 16.0  # 1.0 to 16.0
+    # picam2.video_configuration.controls.Brightness = (
+        # 0.25  # Floating point number from -1.0 to 1.0. 0.0 is normal
+    # )
+    # picam2.video_configuration.controls.Contrast = 1.0  # 0.0 to 32.0
+    # picam2.video_configuration.controls.Saturation = (
+        # 1.0  # 0.0 to 32.0 (0.0 greyscale, 1.0 is normal)
+    # )
+    # picam2.video_configuration.controls.Sharpness = (
+        # 1.0  # Floating point number from 0.0 to 16.0; 1.0 is normal
+    # )
+    picam2.video_configuration.controls.AeEnable = True
+    picam2.video_configuration.controls.AeExposureMode = controls.AeExposureModeEnum.Short # Short / Normal / Long
     picam2.video_configuration.controls.AwbEnable = False
     picam2.video_configuration.controls.AwbMode = (
         controls.AwbModeEnum.Indoor
@@ -266,7 +323,8 @@ if __name__ == "__main__":
     # else:
         # print("CV2 Unable to find golf ball.")
         
-    centroid = find_still_golf_ball_picam2()
+    #centroid = find_still_golf_ball_picam2()
+    centroid = find_still_golf_ball_coco()
     if centroid is not None:
         print("picam2 Centroid:", centroid)
     else:
