@@ -163,3 +163,7 @@ cython_debug/
 27.mp4
 tst_CV_1152x192.mp4
 tstamps.csv
+*.mp4
+*.wav
+*.jpg
+*.png
