@@ -17,10 +17,11 @@ model.setInputScale(1.0/127.5)
 model.setInputMean((127.5, 127.5, 127.5))
 model.setInputSwapRB(True)
 
+font = cv2.FONT_HERSHEY_PLAIN
+
 def detect_ball_coco(img):
     try:
-        # Debugging information
-
+        result={}
         # Convert to RGB format if needed
         if img.shape[2] != 3:
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -34,37 +35,49 @@ def detect_ball_coco(img):
         else:
             model.setInputSize(int(desired_input_size * img_width / img_height), desired_input_size)
 
-        classIndex, confidence, bbox = model.detect(img, confThreshold=0.5)
+        classIndex, confidence, bbox = model.detect(img, confThreshold=0.7)
 
-        result = {}
-
-        if classIndex.size > 0 and confidence.size > 0:
-            highest_confidence_index = np.argmax(confidence)
-            classInd = int(classIndex[highest_confidence_index]-1)
-            conf = confidence[highest_confidence_index]
-            box = bbox[highest_confidence_index]
-
-            x, y, w, h = box
-            centroid_x = x + w // 2
-            centroid_y = y + h // 2
+        # # After getting classIndex, confidence, and bbox
+        # print(f"Length of classIndex: {len(classIndex)} and classIndex is: {classIndex}")
+        # print(f"Length of confidence: {len(confidence)} and confidence is: {confidence} ")
+        # print(f"Length of bbox: {len(bbox)} and bbox is: {bbox}")
             
-            # Display the result with a red dot at the centroid
-            cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        if classIndex is not None and len(classIndex) > 0:
+            classInd = int(classIndex[0])  # the first value is always the highest confidence
+            conf = confidence[0]
+            box = bbox[0]
+
+            # Display a red dot at the centroid
+            centroid_x = box[0] + box[2] // 2
+            centroid_y = box[1] + box[3] // 2
             cv2.circle(img, (centroid_x, centroid_y), 5, (0, 0, 255), -1)  # Red dot at the centroid
-            cv2.putText(img, f"{classLabels[classInd-1]}: ({centroid_x}, {centroid_y})", (x + 10, y + 40),
-                cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0, 255, 0), thickness=2)
 
+            # Surround with a bounding box rectangle
+            cv2.rectangle(img, box, (255, 0, 0), 2)
 
+            # Display the object name and confidence
+            cv2.putText(img, f"{classLabels[classInd-1]}: {conf:.2f}", (box[0] + 10, box[1] + 40),
+                        cv2.FONT_HERSHEY_PLAIN, fontScale=1, color=(0, 255, 0), thickness=2)
+
+            # Populate the result object
             result['object_name'] = classLabels[classInd-1]
             result['confidence'] = conf
             result['centroid'] = (centroid_x, centroid_y)
-            result['frame'] = img
-            
-            # Debugging information
-            # print(f"Detected Object Index: {classInd}")
-            # print(f"Detected Object: {result['object_name']}, Confidence: {result['confidence']}, Centroid: {result['centroid']}")
+            result['frame'] = img  # overlayed now with cv2 data
 
-            return result
+
+        else:
+            # No object detected
+            result['object_name'] = "Not found"
+            result['confidence'] = 0
+            result['centroid'] = (0, 0)
+            result['frame'] = img
+        
+        # print("Result values:")
+        # print(f"Object Name: {result['object_name']}")
+        # print(f"Confidence: {result['confidence']}")
+        # print(f"Centroid: {result['centroid']}")
+        return result
     except Exception as e:
         print(f"Error in detect_ball_coco: {e}")
         return None

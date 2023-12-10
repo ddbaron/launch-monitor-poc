@@ -2,7 +2,14 @@ import subprocess
 import argparse
 
 
-def calculate_offset(res_w=1440, res_h=1088, crop_w=1152, crop_h=192, centroid_x=None, centroid_y=None):
+def calculate_offset(res_w=1456, res_h=1088, crop_w=1152, crop_h=192, centroid_x=None, centroid_y=None):
+    """
+    Here we calculate the region of interest (ROI) based upon the centroid of the ball
+    ROI has a size, eg. 1152 x 192
+    ROI has a starting point, eg. 144, 448 (144 to the right, 448 down)
+    ROI is relative to the native resolution, eg. 1456x1088
+    """
+    
     # Set default centroid values to the center of the crop
     if centroid_x is None:
         centroid_x = crop_w // 2

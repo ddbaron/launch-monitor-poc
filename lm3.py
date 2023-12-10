@@ -25,7 +25,9 @@ import time
 import argparse
 import numpy as np
 import sys
-from media_ctl import set_v4l2_format, list_cameras 
+from media_ctl import set_v4l2_format, list_cameras, calculate_offset
+from find_ball import find_still_golf_ball_coco, configure_vid
+from picamera2 import Picamera2
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch Monitor 3")
@@ -34,13 +36,53 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    # PREWORK
+
+    # Call media-ctl to configure camera for high fps mode
     successful_device = set_v4l2_format(args.width, args.height)
     if successful_device:
-        print(f"Successful configuration on device: {successful_device}")
+        print(
+            f"Successful configuration on device: {successful_device}, listing cameras:"
+        )
+        list_cameras()
     else:
-        print("No successful camera configuration")
+        print("Camera configuration unsuccessful")
         sys.exit()
-        
-    list_cameras()
-    
-    
+
+    # Use cv2 to detect the presence of a ball sitting relatively still. Identify the x.y for crop later
+    centroid = find_still_golf_ball_coco()
+    if centroid is not None:
+        print("picam2 Centroid:", centroid)
+        offset_x, offset_y, centroid_x, centroid_y = calculate_offset(
+            crop_w=args.width,
+            crop_h=args.height,
+            centroid_x=centroid[0],
+            centroid_y=centroid[1],
+        )
+    else:
+        print("picam2 Unable to find golf ball.")
+        sys.exit()
+
+    # READY -
+
+    # Call media-ctl to configure camera for high fps mode
+    print(f"Setting centroid x:{centroid_x} and y: {centroid_y} ")
+    successful_device = set_v4l2_format(args.width, args.height, centroid_x, centroid_y)
+    if successful_device:
+        print(
+            f"Successful configuration on device: {successful_device}, listing cameras:"
+        )
+        list_cameras()
+        with Picamera2() as picam2:
+            picam2 = configure_vid(picam2)
+            picam2.start()
+            while True:
+                frame = picam2.capture_array()
+                cv2.imshow("Frame", frame)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+            picam2.stop()
+            cv2.destroyAllWindows()
+    else:
+        print("Camera configuration unsuccessful")
+        sys.exit()
