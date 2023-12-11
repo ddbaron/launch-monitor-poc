@@ -4,10 +4,12 @@ import argparse
 
 def calculate_offset(res_w=1456, res_h=1088, crop_w=1152, crop_h=192, centroid_x=None, centroid_y=None):
     """
-    Here we calculate the region of interest (ROI) based upon the centroid of the ball
-    ROI has a size, eg. 1152 x 192
+    Here we calculate the region of interest (ROI) based upon where we found the centroid of the ball
+    
+    Camera has a native resolution, given as res_w, res_h, eg. 1456x1088
+    Region of Interest (ROI) within native resolution, crop_w crop_h, eg. 1152 x 192 @ 304 fps
     ROI has a starting point, eg. 144, 448 (144 to the right, 448 down)
-    ROI is relative to the native resolution, eg. 1456x1088
+
     """
     
     # Set default centroid values to the center of the crop

@@ -7,10 +7,11 @@ LM3
 	use cv2 to detect presence of a ball sitting relatively still. identify the x.y for crop later
 	stop cv2
 **ready
-	call libcamera-vid, crop for the x.y location, record video with --circular buffer
-		libcamera-vid --circular 1 --inline ...
+	call media-ctl, crop for the x.y location
+    call libcamera-vid record video with --circular buffer
+		libcamera-vid --circular 1 --inline ... producing an .h264 file
 	wait for the click sound of a hit, signal licamera-vid to exit, remember the sound_ts
-	crop the file using the sound_ts
+	crop the .h264 file using the sound_ts:
 		ffmpeg -ss <start_timestamp> -i input.h264 -t 2 -c copy output.h264
 	ffmpeg the output.h264 file to output.mp4
 **postwork

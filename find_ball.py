@@ -74,18 +74,18 @@ def configure_vid(picam2):
         picam2.video_configuration.controls.ExposureTime = 1000
         # picam2.video_configuration.controls.AnalogueGain = 16.0  # 1.0 to 16.0
         # picam2.video_configuration.controls.Brightness = (
-            # 0.25  # Floating point number from -1.0 to 1.0. 0.0 is normal
+        #     0.25  # Floating point number from -1.0 to 1.0. 0.0 is normal
         # )
         # picam2.video_configuration.controls.Contrast = 1.0  # 0.0 to 32.0
         # picam2.video_configuration.controls.Saturation = (
-            # 1.0  # 0.0 to 32.0 (0.0 greyscale, 1.0 is normal)
+        #     1.0  # 0.0 to 32.0 (0.0 greyscale, 1.0 is normal)
         # )
         # picam2.video_configuration.controls.Sharpness = (
-            # 1.0  # Floating point number from 0.0 to 16.0; 1.0 is normal
+        #     1.0  # Floating point number from 0.0 to 16.0; 1.0 is normal
         # )
-        picam2.video_configuration.controls.AeEnable = False
+        picam2.video_configuration.controls.AeEnable = True
         picam2.video_configuration.controls.AeExposureMode = controls.AeExposureModeEnum.Short # Short / Normal / Long
-        picam2.video_configuration.controls.AwbEnable = False
+        picam2.video_configuration.controls.AwbEnable = True
         picam2.video_configuration.controls.AwbMode = (
             controls.AwbModeEnum.Indoor
         )  # Auto, Indoor, Daylight, Cloudy, Fluorescent
