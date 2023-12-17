@@ -1,6 +1,7 @@
 import subprocess
 import os
 import time
+import sys
 import pyaudio
 import numpy as np
 import concurrent.futures
@@ -9,17 +10,43 @@ class VideoRecorder:
     def __init__(self):
         self.video_filename = "output.h264"
         self.sound_ts = None
+        ### 1440x480@132, 1440x320@193, 1200x208@283, 1152x192x304, 672x128@427, 816x144@387
+        self.width = 1440
+        self.height = 320
+        self.fps = 193
+        self.shutter = 250
 
+    def media_ctl(self):
+         # Loop through media devices and set V4L2 format
+        offset_x = (1456 - self.width) // 2
+        offset_y = (1088 - self.height) // 2
+
+        for m in range(0, 6):
+            try:
+                # gscrop: (144, 448)/1152x192 crop
+                # mine: (576, 96)/880x192 crop
+                
+                command = f'media-ctl -d /dev/media{m} --set-v4l2 "\'imx296 10-001a\':0 [fmt:SBGGR10_1X10/{self.width}x{self.height} crop:({offset_x},{offset_y})/{self.width}x{self.height}]"'
+                print(f"Command: {command}")
+                subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                
+                #print(f"Success configuring media-ctl on /dev/media{m}\n")
+                return f'/dev/media{m}'
+                break
+            except subprocess.CalledProcessError as e:
+                print(f"Error configuring media-ctl: {e}")
+        return None
+    
     def record_video(self):
         try:
             # Record video using libcamera-vid with circular buffer
             # --width 1152 --height 192 --denoise cdn_off --framerate 304 --shutter 1000 -o {self.video_filename} -n
-            record_cmd = f"libcamera-vid --circular 1 --inline --width 1152 --height 192 --denoise cdn_off --framerate 304 --shutter 500 -t 30000 -o {self.video_filename} -n"
+            record_cmd = f"libcamera-vid --circular 1 --inline --width {self.width} --height {self.height} --framerate {self.fps} --shutter {self.shutter} --denoise cdn_off  -t 0 -o {self.video_filename} -n"
             subprocess.run(record_cmd, shell=True, check=True)
         except subprocess.CalledProcessError as e:
             print(f"Error during video recording: {e}")
 
-    def wait_for_hit2(self, stream, chunk_size=1024, threshold=1000):
+    def wait_for_hit2(self, stream, chunk_size=1024, threshold=5000):
         while True:
             data = stream.read(chunk_size)
             audio_signal = np.frombuffer(data, dtype=np.int16)
@@ -31,14 +58,21 @@ class VideoRecorder:
                 self.sound_ts = time.time()
                 break
             else:
-                print("no sound", end='\r')
+                print("Waiting for sound...", end='\r')
 
     def convert_to_mp4(self):
             # Convert the cropped video to MP4 using ffmpeg
-            mp4_cmd = f"ffmpeg -r 30 -y -i {self.video_filename} {self.video_filename}.mp4"
+            mp4_cmd = f"ffmpeg -y -r {int(self.fps) / 10} -i {self.video_filename} {self.video_filename}.mp4"
             subprocess.run(mp4_cmd, shell=True, check=True)
 
     def run(self):
+
+        if(self.media_ctl):
+            print(f"Successful configuration on device: {successful_device}")
+        else:
+            print("No successful configuration")
+            sys.exit()
+
         # Use ThreadPoolExecutor to run record_video() concurrently with wait_for_hit2()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # Start recording video concurrently
@@ -58,7 +92,7 @@ class VideoRecorder:
                 audio_future.result()  # Wait for audio_future to complete
 
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"Audio Error: {e}")
                 # Handle the exception as needed
             finally:
                 # Perform any cleanup or resource release here
