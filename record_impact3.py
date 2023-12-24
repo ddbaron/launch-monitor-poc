@@ -128,24 +128,32 @@ class VideoRecorder:
         print(f"Estimated focal Length in Pixels (Width, Height): {focal_length_px}")
         focal_length = focal_length_px[0]  # Estimated using width dimension
 
+        # Initialize counters
+        total_frames = 0
+        golf_ball_detected_frames = 0
+
         while True:
             # Read the next frame
             ret, frame = cap.read()
 
+            # Increment total frame count
+            total_frames += 1
+
             # Break the loop if the video has ended
             if not ret:
+                print("No more frames to read. Exiting.")
                 break
 
             # Resize the frame
             resized_frame = cv2.resize(frame, (width, height))
 
-            # Color-based thresholding for the golf ball (adjust the range based on the golf ball color)
+            # Color-based thresholding for the golf ball
             lower_color = np.array([20, 100, 100])
             upper_color = np.array([40, 255, 255])
             hsv_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2HSV)
             mask = cv2.inRange(hsv_frame, lower_color, upper_color)
 
-            # Apply morphological operations to clean up the binary image
+            # Apply morphological operations
             kernel = np.ones((5, 5), np.uint8)
             mask = cv2.dilate(mask, kernel, iterations=2)
             mask = cv2.erode(mask, kernel, iterations=2)
@@ -153,10 +161,14 @@ class VideoRecorder:
             # Find contours
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-            # Example: Improved object detection with circle and dot drawing
+            golf_ball_detected = False  # Flag to check if golf ball is detected in this frame
+
+            # Object detection
             for contour in contours:
-                # Filter contours based on area (you may need to adjust the threshold)
                 if cv2.contourArea(contour) > 100:
+                    golf_ball_detected = True
+                    golf_ball_detected_frames += 1
+
                     # Fit a circle around the contour
                     (x, y), radius = cv2.minEnclosingCircle(contour)
                     center = (int(x), int(y))
@@ -165,25 +177,26 @@ class VideoRecorder:
                     cv2.circle(resized_frame, center, int(radius), (0, 255, 0), 2)
                     cv2.circle(resized_frame, center, 5, (0, 0, 255), -1)
 
-                    # Calculate the depth (z-coordinate) based on the real-world diameter
+                    # Calculate the depth (z-coordinate)
                     depth = (focal_length * real_world_diameter_mm) / (2 * radius)
 
-                    # Display XYZ coordinates on the screen
+                    # Display XYZ coordinates
                     coordinates_text = "XYZ: ({:.2f}, {:.2f}, {:.2f})".format(center[0], center[1], depth)
                     cv2.putText(resized_frame, coordinates_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-
-                    # Check if part of the object is off-screen (adjust the margin as needed)
-                    # margin = 20
-                    # if center[0] - radius < margin or center[0] + radius > width - margin or \
-                    # center[1] - radius < margin or center[1] + radius > height - margin:
-                    #     print("Object partially off-screen. Stopping detection.")
-                    #     continue
 
                     # Output a message with real-world coordinates
                     print("Golf ball detected at real-world coordinates (x, y, z): ({:.2f}, {:.2f}, {:.2f})".format(center[0], center[1], depth))
 
+            # Detection status for this frame
+            if not golf_ball_detected:
+                print(f"Frame {total_frames}: Golf ball not detected.")
+
             # Write the processed frame to the output video
             out.write(resized_frame)
+
+        # After the loop, print summary statistics
+        print(f"Total number of frames read: {total_frames}")
+        print(f"Number of frames where golf ball was detected: {golf_ball_detected_frames}")
 
         # Release resources
         cap.release()
