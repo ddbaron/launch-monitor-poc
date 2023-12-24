@@ -12,10 +12,11 @@ class VideoRecorder:
         self.save_pts = "/dev/shm/tst.pts"
         self.sound_ts = None
         ### 1440x480@132, 1440x320@193, 1200x208@283, 1152x192x304, 672x128@427, 816x144@387
-        self.width = 1200
-        self.height = 208
-        self.fps = 283
-        self.shutter = 300
+        self.width = 1440
+        self.height = 320
+        self.fps = 193
+        self.shutter = 250
+        self.threshold = 10000 # sound threshold to hear impact
 
 
     def media_ctl(self):
@@ -40,7 +41,7 @@ class VideoRecorder:
         try:
             # Record video using libcamera-vid with circular buffer
             # --width 1152 --height 192 --denoise cdn_off --framerate 304 --shutter 1000 -o {self.video_filename} -n
-            record_cmd = f"libcamera-vid --circular 1 --inline --width {self.width} --height {self.height} --framerate {self.fps} --shutter {self.shutter} --denoise cdn_off --save-pts {self.save_pts} -t 0 -o {self.video_filename} -n"
+            record_cmd = f"libcamera-vid --level 4.2 --circular 1 --inline --width {self.width} --height {self.height} --framerate {self.fps} --shutter {self.shutter} --denoise cdn_off --save-pts {self.save_pts} -t 0 -o {self.video_filename} -n"
             print(f"libcamera-vid config: {record_cmd}.")
             subprocess.run(record_cmd, shell=True, check=True)
         except subprocess.CalledProcessError as e:
@@ -52,7 +53,7 @@ class VideoRecorder:
             audio_signal = np.frombuffer(data, dtype=np.int16)
 
             # Check if the amplitude exceeds the threshold, stop video
-            if np.max(np.abs(audio_signal)) > threshold:
+            if np.max(np.abs(audio_signal)) > self.threshold:
                 print("Click detected! Triggering action.")
                 subprocess.run("pkill -SIGINT libcamera-vid", shell=True)
                 self.sound_ts = time.time()
