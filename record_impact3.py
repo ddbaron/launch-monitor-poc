@@ -4,6 +4,7 @@ import os
 import time
 import sys
 import pyaudio
+import argparse
 import numpy as np
 import concurrent.futures
 
@@ -14,9 +15,9 @@ class VideoRecorder:
         self.sound_ts = None
         ### 1440x480@132, 1440x320@193, 1200x208@283, 1152x192x304, 672x128@427, 816x144@387
         self.width = 1440
-        self.height = 320
-        self.fps = 193
-        self.shutter = 250
+        self.height = 480
+        self.fps = 132
+        self.shutter = 100
         self.threshold = 10000 # sound threshold to hear impact
         self.focal_length_mm = 6  # 6mm lens
         self.pixel_size_um = 3.45  # Pixel size in µm
@@ -44,7 +45,6 @@ class VideoRecorder:
     def record_video(self):
         try:
             # Record video using libcamera-vid with circular buffer
-            # --width 1152 --height 192 --denoise cdn_off --framerate 304 --shutter 1000 -o {self.video_filename} -n
             record_cmd = f"libcamera-vid --level 4.2 --circular 1 --inline --width {self.width} --height {self.height} --framerate {self.fps} --shutter {self.shutter} --denoise cdn_off --save-pts {self.save_pts} -t 0 -o {self.video_filename} -n"
             print(f"libcamera-vid config: {record_cmd}.")
             subprocess.run(record_cmd, shell=True, check=True)
@@ -116,14 +116,14 @@ class VideoRecorder:
         directory_path = os.path.dirname(self.video_filename)
         filename, extension = os.path.splitext(os.path.basename(self.video_filename))
 
-        # Create a VideoWriter object with the same filename but append '_CV'
+        # Create a VideoWriter object with the same filename but with 'CV'
         output_filename = f'CV_{filename}_{width}x{height}.mp4'
         out = cv2.VideoWriter(output_filename, cv2.VideoWriter_fourcc(*'mp4v'), int(self.fps)/10, (width, height))
 
         # Known real-world diameter of the golf ball in millimeters
         real_world_diameter_mm = 42.67
 
-        # Estimated focal length in pixels (this value needs to be obtained through camera calibration)
+        # Estimated focal length in pixels (TODO: this value needs to be obtained through camera calibration)
         focal_length_px = video_recorder.estimate_focal_length_in_pixels(self.focal_length_mm, self.pixel_size_um, self.sensor_diagonal_mm, self.resolution)
         print(f"Estimated focal Length in Pixels (Width, Height): {focal_length_px}")
         focal_length = focal_length_px[0]  # Estimated using width dimension
@@ -215,6 +215,18 @@ class VideoRecorder:
         except subprocess.CalledProcessError as e:
             print(f"Error during ptsanalyze: {e}")
 
+    def display_fov(self):
+
+        self.media_ctl()
+
+        try:
+            # show window to enable user to place ball within window
+            record_cmd = f"libcamera-vid --width {self.width} --height {self.height} -t 0"
+            print(f"libcamera-vid display_fov config: {record_cmd}.")
+            subprocess.run(record_cmd, shell=True, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error during display_fov: {e}")
+
     def run(self):
 
         # Configure media-ctrl
@@ -225,6 +237,7 @@ class VideoRecorder:
             print("No successful configuration")
             sys.exit()
 
+        # Record video until impact is heard, then save off the last 1 second
         # Use ThreadPoolExecutor to run record_video() concurrently with wait_for_hit2()
         with concurrent.futures.ThreadPoolExecutor() as executor:
             # Start recording video concurrently
@@ -257,18 +270,25 @@ class VideoRecorder:
             # Wait for video recording to complete
             video_future.result()
 
-        # Continue post processing after both tasks are complete
+        # Begin post processing
         print("Video recording and sound detection completed. Begining post processing.")
         
         #self.convert_to_mp4()
 
-        # read file with CV, detect ball and xyz and write out mp4 with overlays
+        # read file with CV, detect ball and xyz and write out mp4 with CV overlays
         self.cv_overlay_mp4()
 
-        # Run ptsanalyze to determine fps and frameskips
+        # Run ptsanalyze on the .h264 to determine fps and frameskips
         self.ptsanalyze()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Launch Monitor")
+    parser.add_argument("--fov", type=int, default=0, help="Display the FOV so the ball can be oriented manually")
+    args = parser.parse_args()
 
     video_recorder = VideoRecorder()
-    video_recorder.run()
+
+    if args.fov == 1:
+        video_recorder.display_fov()        
+    else:
+        video_recorder.run()
