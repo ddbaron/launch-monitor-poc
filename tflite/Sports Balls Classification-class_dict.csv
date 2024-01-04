@@ -1,0 +1,16 @@
+class_index,class,height,width
+0,american_football,224,224
+1,baseball,224,224
+2,basketball,224,224
+3,billiard_ball,224,224
+4,bowling_ball,224,224
+5,cricket_ball,224,224
+6,football,224,224
+7,golf_ball,224,224
+8,hockey_ball,224,224
+9,hockey_puck,224,224
+10,rugby_ball,224,224
+11,shuttlecock,224,224
+12,table_tennis_ball,224,224
+13,tennis_ball,224,224
+14,volleyball,224,224

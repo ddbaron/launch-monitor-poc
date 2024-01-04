@@ -92,13 +92,13 @@ for idx, frame in enumerate(frame_buffer):
 
     # Write the frame to the video
     # try:
-        # if out.write(bgr_frame):
-            # continue
-        # else:
-            # print(f"Failed to write frame {idx}")
-            # #break
+    #     if out.write(bgr_frame):
+    #         continue
+    #     else:
+    #         print(f"Failed to write frame {idx}")
+    #         #break
     # except Exception as e:
-        # print(f"Exception at frame {idx}:", e)
+    #     print(f"Exception at frame {idx}:", e)
 
 
 if out.isOpened():

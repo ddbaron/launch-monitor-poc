@@ -12,7 +12,7 @@ picam2.video_configuration.raw = None
 picam2.video_configuration.size = (1152, 192)
 picam2.video_configuration.controls.FrameRate = 304
 picam2.video_configuration.controls.ExposureTime = 1000
-picam2.video_configuration.controls.AnalogueGain = 16.0  # 1.0 to 16.0
+picam2.video_configuration.controls.AnalogueGain = 16.0  # 1.0 min to 16.0 max, no default
 picam2.video_configuration.controls.Brightness = (
     0.25  # Floating point number from -1.0 to 1.0. 0.0 is normal
 )
@@ -43,7 +43,7 @@ frame_buffer = []
 cnt = 0
 
 encoder = H264Encoder(repeat=True, iperiod=15)
-output = FileOutput('foo.h264')
+#output = FileOutput('foo.h264')
 picam2.start()
 
 while time.time() - start_time < duration:
@@ -56,8 +56,8 @@ while time.time() - start_time < duration:
     frame_buffer.append(frame.copy())
 
     # For example, you can use cv2.imshow to display the frame
-    #cv2.imshow("Recording Frame", frame)
-    #cv2.waitKey(1)  # Update display
+    cv2.imshow("Recording Frame", frame)
+    cv2.waitKey(1)  # Update display
 
 print(f"we have {len(frame_buffer)} frames.")
 

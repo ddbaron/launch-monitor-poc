@@ -12,13 +12,21 @@ class VideoRecorder:
     def __init__(self):
         self.video_filename = "/dev/shm/output.h264"
         self.save_pts = "/dev/shm/tst.pts"
-        self.sound_ts = None
-        ### 1440x480@132, 1440x320@193, 1200x208@283, 1152x192x304, 672x128@427, 816x144@387
+        ### libcamera-vid and media-ctl settings
+        ## 1440x480@132, 1440x320@193, 1200x208@283, 1152x192x304, 816x144@387, 672x128@427
         self.width = 1440
         self.height = 480
         self.fps = 132
-        self.shutter = 100
+        self.shutter = 250
+        self.gain = 16.0 # 1.0 to 16.0; no default
+        self.brightness = 0.25 # -1.0 to 1.0; 0.0 is normal
+        self.contrast = 1.0 # 0.0 to 32.0
+        self.saturation = 1.0 # 0.0 to 32.0 (0.0 greyscale, 1.0 is normal)
+        self.sharpness = 1.0 # 0.0 to 16.0; 1.0 is normal
+        ## audio ##
         self.threshold = 10000 # sound threshold to hear impact
+        self.sound_ts = None
+        ## camera sensor ##
         self.focal_length_mm = 6  # 6mm lens
         self.pixel_size_um = 3.45  # Pixel size in µm
         self.sensor_diagonal_mm = 6.3  # Sensor diagonal in mm
@@ -45,7 +53,11 @@ class VideoRecorder:
     def record_video(self):
         try:
             # Record video using libcamera-vid with circular buffer
-            record_cmd = f"libcamera-vid --level 4.2 --circular 1 --inline --width {self.width} --height {self.height} --framerate {self.fps} --shutter {self.shutter} --denoise cdn_off --save-pts {self.save_pts} -t 0 -o {self.video_filename} -n"
+            record_cmd = f"libcamera-vid --level 4.2 --circular 1 --inline --width {self.width} --height {self.height} \
+                --framerate {self.fps} --shutter {self.shutter} \
+                --gain {self.gain} --brightness {self.brightness} --contrast {self.contrast} \
+                --saturation {self.saturation} --sharpness {self.sharpness} \
+                --denoise cdn_off --save-pts {self.save_pts} -t 0 -o {self.video_filename} -n"
             print(f"libcamera-vid config: {record_cmd}.")
             subprocess.run(record_cmd, shell=True, check=True)
         except subprocess.CalledProcessError as e:
@@ -117,7 +129,7 @@ class VideoRecorder:
         filename, extension = os.path.splitext(os.path.basename(self.video_filename))
 
         # Create a VideoWriter object with the same filename but with 'CV'
-        output_filename = f'CV_{filename}_{width}x{height}.mp4'
+        output_filename = f'rec_impact3_{filename}_{width}x{height}.mp4'
         out = cv2.VideoWriter(output_filename, cv2.VideoWriter_fourcc(*'mp4v'), int(self.fps)/10, (width, height))
 
         # Known real-world diameter of the golf ball in millimeters

@@ -1,5 +1,6 @@
 """
 LM3
+    requires: media_ctl.py, find_ball.py->detect_ball_coco.py
 
 **prework
 	call media-ctl to configure camera for high fps mode

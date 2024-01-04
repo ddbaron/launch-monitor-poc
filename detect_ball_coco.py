@@ -1,3 +1,7 @@
+"""
+    Used by find_ball.py
+    Also works standalone
+"""
 import cv2
 import numpy as np
 

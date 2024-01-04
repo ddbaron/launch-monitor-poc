@@ -1,3 +1,6 @@
+"""
+early demo of finding z depth, not accurate at finding the ball
+"""
 import cv2
 import numpy as np
 import sys
@@ -5,8 +8,8 @@ import os
 
 # Check if a video path argument is provided
 if len(sys.argv) < 2:
-    print("No video path provided. Using default path '/dev/shm/tst.h264'")
-    video_path = '/dev/shm/tst.h264'
+    print("No video path provided. Using default path '/dev/shm/output.h264'")
+    video_path = '/dev/shm/output.h264'
 else:
     # Get the video path from the command-line argument
     video_path = sys.argv[1]
@@ -27,7 +30,7 @@ height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 filename, extension = os.path.splitext(os.path.basename(video_path))
 
 # Create a VideoWriter object with the same filename but append '_CV'
-output_filename = f'{filename}_CV_{width}x{height}.mp4'
+output_filename = f'{filename}_depthCV1_{width}x{height}.mp4'
 out = cv2.VideoWriter(output_filename, cv2.VideoWriter_fourcc(*'mp4v'), 30, (width, height))
 
 # Known real-world diameter of the golf ball in millimeters
