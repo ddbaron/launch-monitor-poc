@@ -14,9 +14,9 @@ class VideoRecorder:
         self.save_pts = "/dev/shm/tst.pts"
         ### libcamera-vid and media-ctl settings
         ## 1440x480@132, 1440x320@193, 1200x208@283, 1152x192x304, 816x144@387, 672x128@427
-        self.width = 1440
-        self.height = 480
-        self.fps = 132
+        self.width = 1152
+        self.height = 192
+        self.fps = 304
         self.shutter = 250
         self.gain = 16.0 # 1.0 to 16.0; no default
         self.brightness = 0.25 # -1.0 to 1.0; 0.0 is normal
