@@ -7,6 +7,7 @@ import pyaudio
 import argparse
 import numpy as np
 import concurrent.futures
+from sense_hat_ctl import set_leds
 
 class VideoRecorder:
     def __init__(self):
@@ -14,14 +15,14 @@ class VideoRecorder:
         self.save_pts = "/dev/shm/tst.pts"
         ### libcamera-vid and media-ctl settings
         ## 1440x480@132, 1440x320@193, 1200x208@283, 1152x192x304, 816x144@387, 672x128@427
-        self.width = 1152
-        self.height = 192
-        self.fps = 304
-        self.shutter = 250
-        self.gain = 16.0 # 1.0 to 16.0; no default
-        self.brightness = 0.25 # -1.0 to 1.0; 0.0 is normal
-        self.contrast = 1.0 # 0.0 to 32.0
-        self.saturation = 1.0 # 0.0 to 32.0 (0.0 greyscale, 1.0 is normal)
+        self.width = 1440
+        self.height = 480
+        self.fps = 132
+        self.shutter = 200
+        self.gain = 16.0 # 1.0 to 16.0; no default -- 16.0
+        self.brightness = 0.0 # -1.0 to 1.0; 0.0 is normal -- 0.25
+        self.contrast = 1.0 # 0.0 to 32.0 -- 1.0
+        self.saturation = 0.0 # 0.0 to 32.0 (0.0 greyscale, 1.0 is normal)
         self.sharpness = 1.0 # 0.0 to 16.0; 1.0 is normal
         ## audio ##
         self.threshold = 10000 # sound threshold to hear impact
@@ -129,7 +130,7 @@ class VideoRecorder:
         filename, extension = os.path.splitext(os.path.basename(self.video_filename))
 
         # Create a VideoWriter object with the same filename but with 'CV'
-        output_filename = f'rec_impact3_{filename}_{width}x{height}.mp4'
+        output_filename = f'rec_impact3_{filename}_{width}x{height}@{self.fps}shtr{self.shutter}.mp4'
         out = cv2.VideoWriter(output_filename, cv2.VideoWriter_fourcc(*'mp4v'), int(self.fps)/10, (width, height))
 
         # Known real-world diameter of the golf ball in millimeters
@@ -159,11 +160,12 @@ class VideoRecorder:
             # Resize the frame
             resized_frame = cv2.resize(frame, (width, height))
 
-            # Color-based thresholding for the golf ball
-            lower_color = np.array([20, 100, 100])
-            upper_color = np.array([40, 255, 255])
-            hsv_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2HSV)
-            mask = cv2.inRange(hsv_frame, lower_color, upper_color)
+            # Convert to grayscale
+            gray_frame = cv2.cvtColor(resized_frame, cv2.COLOR_BGR2GRAY)
+
+            # Apply thresholding
+            threshold_value = 200 # 0..255 black..white-
+            _, mask = cv2.threshold(gray_frame, threshold_value, 255, cv2.THRESH_BINARY)
 
             # Apply morphological operations
             kernel = np.ones((5, 5), np.uint8)
@@ -172,6 +174,7 @@ class VideoRecorder:
 
             # Find contours
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
 
             golf_ball_detected = False  # Flag to check if golf ball is detected in this frame
 
@@ -241,10 +244,13 @@ class VideoRecorder:
 
     def run(self):
 
+        set_leds("off")
+
         # Configure media-ctrl
         successful_device = self.media_ctl()
         if successful_device:
             print(f"Successful configuration on device: {successful_device}")
+            set_leds("yellow")
         else:
             print("No successful configuration")
             sys.exit()
@@ -280,18 +286,21 @@ class VideoRecorder:
                     p.terminate()
 
             # Wait for video recording to complete
+            set_leds("green")
             video_future.result()
 
         # Begin post processing
         print("Video recording and sound detection completed. Begining post processing.")
-        
+        set_leds("blue")
         #self.convert_to_mp4()
 
         # read file with CV, detect ball and xyz and write out mp4 with CV overlays
         self.cv_overlay_mp4()
+        set_leds("yellow")
 
         # Run ptsanalyze on the .h264 to determine fps and frameskips
         self.ptsanalyze()
+        set_leds("red")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch Monitor")

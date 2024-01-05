@@ -1,5 +1,4 @@
 from sense_hat import SenseHat
-import time
 import argparse
 import logging
 
@@ -13,33 +12,14 @@ except Exception as e:
     logging.error(f"Failed to initialize Sense HAT: {e}")
     exit(1)
 
-def set_leds(color, flash=False):
+def set_leds(color):
     """
-    Set the LEDs to the specified color. Optionally, flash the LEDs.
+    Set the LEDs to the specified color.
 
-    :param color: A tuple (R, G, B) to set the color of the LEDs.
-    :param flash: Boolean to indicate if the LEDs should flash.
+    :param color: A string (color name) or a tuple (R, G, B) to set the color of the LEDs.
     """
-    try:
-        if flash:
-            for _ in range(3):  # Flash 3 times
-                sense.clear(color)  # Set color
-                time.sleep(0.5)     # On for 0.5 seconds
-                sense.clear()       # Turn off
-                time.sleep(0.5)     # Off for 0.5 seconds
-        else:
-            sense.clear(color)  # Set color without flashing
-    except Exception as e:
-        logging.error(f"Error setting LEDs: {e}")
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Control the Sense HAT LED panel")
-    parser.add_argument("--color", type=str, choices=['off', 'blue', 'green', 'yellow', 'red'], default='off', help="Color of the LEDs")
-    parser.add_argument("--flash", action='store_true', help="Enable flashing LEDs")
-
-    args = parser.parse_args()
-
-    colors = {
+    # Define color dictionary
+    color_dict = {
         'off': (0, 0, 0),
         'blue': (0, 0, 255),
         'green': (0, 255, 0),
@@ -47,7 +27,27 @@ if __name__ == "__main__":
         'red': (255, 0, 0)
     }
 
+    # Check if the color is a string and get the corresponding tuple
+    if isinstance(color, str):
+        color = color_dict.get(color.lower(), (0, 0, 0))  # Default to 'off' if color not found
+
     try:
-        set_leds(colors[args.color], args.flash)
+        sense.clear(color)  # Set color
+    except Exception as e:
+        logging.error(f"Error setting LEDs: {e}")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Control the Sense HAT LED panel")
+    parser.add_argument("--color", type=str, default='off', help="Color of the LEDs (name or RGB tuple)")
+
+    args = parser.parse_args()
+
+    try:
+        color_input = args.color
+        # Check if the input is tuple-like and convert it
+        if ',' in color_input:
+            color_input = tuple(map(int, color_input.split(',')))
+
+        set_leds(color_input)
     except Exception as e:
         logging.error(f"Failed to execute set_leds function: {e}")
