@@ -7,7 +7,7 @@ import pyaudio
 import argparse
 import numpy as np
 import concurrent.futures
-from sense_hat_ctl import set_leds
+from sense_hat_manager import set_leds
 
 class VideoRecorder:
     def __init__(self):
@@ -25,7 +25,7 @@ class VideoRecorder:
         self.saturation = 0.0 # 0.0 to 32.0 (0.0 greyscale, 1.0 is normal)
         self.sharpness = 1.0 # 0.0 to 16.0; 1.0 is normal
         ## audio ##
-        self.threshold = 10000 # sound threshold to hear impact
+        self.threshold = 2000 # sound threshold to hear impact
         self.sound_ts = None
         ## camera sensor ##
         self.focal_length_mm = 6  # 6mm lens
@@ -236,7 +236,7 @@ class VideoRecorder:
 
         try:
             # show window to enable user to place ball within window
-            record_cmd = f"libcamera-vid --width {self.width} --height {self.height} -t 0"
+            record_cmd = f"libcamera-vid --saturation {self.saturation} --width {self.width} --height {self.height} -t 0"
             print(f"libcamera-vid display_fov config: {record_cmd}.")
             subprocess.run(record_cmd, shell=True, check=True)
         except subprocess.CalledProcessError as e:
@@ -300,7 +300,7 @@ class VideoRecorder:
 
         # Run ptsanalyze on the .h264 to determine fps and frameskips
         self.ptsanalyze()
-        set_leds("red")
+        set_leds("clear")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launch Monitor")
